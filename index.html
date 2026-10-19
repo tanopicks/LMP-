@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analizador Diario LMP — Pitcheo, Bateo y Abridores</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Top Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="brand-badge">LMP</div>
+        <div>
+          <h1>Analizador Diario LMP</h1>
+          <p class="subtitle">Conectado en vivo a <a href="https://www.lmp.mx/" target="_blank" rel="noopener noreferrer">lmp.mx</a> &bull; <a href="https://www.lmp.mx/estadisticas/equipos" target="_blank" rel="noopener noreferrer">Estadísticas de Equipos</a></p>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="control-group">
+          <label for="gameDate">Fecha de Jornada</label>
+          <div class="date-nav">
+            <button type="button" id="prevDayBtn" class="btn-icon" title="Día anterior">&#9664;</button>
+            <input type="date" id="gameDate" />
+            <button type="button" id="nextDayBtn" class="btn-icon" title="Día siguiente">&#9654;</button>
+            <button type="button" id="todayBtn" class="btn-secondary">Hoy</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label for="seasonType">Fase</label>
+          <select id="seasonType">
+            <option value="regular" selected>Temporada Regular</option>
+            <option value="playoffs">Playoffs</option>
+          </select>
+        </div>
+
+        <button type="button" id="refreshBtn" class="btn-primary">
+          <span class="sync-icon" id="syncIcon">&#8635;</span> Actualizar Datos
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-content">
+    <!-- Status Bar -->
+    <div class="status-bar" id="statusBar">
+      <div class="status-indicator">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Conectando con api.lmp.mx...</span>
+      </div>
+      <div class="last-updated" id="lastUpdated"></div>
+    </div>
+
+    <!-- Daily Matchups Section -->
+    <section class="card games-section">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">ROL DE JUEGOS DIARIO</span>
+          <h2 id="scheduleTitle">Encuentros del Día</h2>
+        </div>
+        <div class="manual-selector">
+          <span class="manual-label">O comparar manualmente:</span>
+          <select id="manualAwaySelect" aria-label="Equipo Visitante"></select>
+          <span class="vs-pill">VS</span>
+          <select id="manualHomeSelect" aria-label="Equipo Local"></select>
+        </div>
+      </div>
+
+      <div id="gamesGrid" class="games-grid">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- Active Matchup Banner -->
+    <section class="matchup-hero" id="matchupHero">
+      <div class="hero-team hero-away">
+        <span class="role-tag">VISITANTE</span>
+        <img id="heroAwayLogo" src="" alt="Logo Visitante" class="hero-logo" />
+        <div class="hero-team-info">
+          <h2 id="heroAwayName">-</h2>
+          <p id="heroAwayRecord" class="team-record">0 - 0</p>
+        </div>
+      </div>
+
+      <div class="hero-center">
+        <div class="hero-vs-circle">VS</div>
+        <div id="heroGameMeta" class="hero-meta">Selecciona un encuentro</div>
+      </div>
+
+      <div class="hero-team hero-home">
+        <div class="hero-team-info text-right">
+          <h2 id="heroHomeName">-</h2>
+          <p id="heroHomeRecord" class="team-record">0 - 0</p>
+        </div>
+        <img id="heroHomeLogo" src="" alt="Logo Local" class="hero-logo" />
+        <span class="role-tag">LOCAL</span>
+      </div>
+    </section>
+
+    <!-- 3 Analysis Areas Grid -->
+    <div class="analysis-sections">
+
+      <!-- AREA 1: ABRIDOR -->
+      <section class="card analysis-card" id="abridorSection">
+        <div class="area-header area-header-starter">
+          <div>
+            <span class="area-badge">ÁREA 1 &bull; INGRESO MANUAL</span>
+            <h3>1. Abridor (Duelo de Lanzadores)</h3>
+            <p class="area-desc">Ingresa las estadísticas de cada abridor. Se marca con color quién gana cada departamento (sin puntos).</p>
+          </div>
+          <div class="starter-actions">
+            <button type="button" id="autofillPitchersBtn" class="btn-outline" title="Rellenar con estadísticas actuales de la temporada LMP si están disponibles">
+              ⚡ Autocompletar con stats LMP
+            </button>
+            <button type="button" id="clearPitchersBtn" class="btn-outline-danger" title="Limpiar todos los campos de abridor de este juego">
+              Limpiar campos
+            </button>
+          </div>
+        </div>
+
+        <div class="starters-names-bar">
+          <div class="starter-box away-starter-box">
+            <img id="awayStarterImg" src="" alt="Pitcher Visitante" class="starter-avatar" />
+            <div class="starter-input-wrap">
+              <label for="awayPitcherName">Abridor Visitante (<span id="awayStarterTeamLabel">VIS</span>)</label>
+              <input type="text" id="awayPitcherName" placeholder="Nombre del abridor visitante..." />
+              <small id="awayPitcherSummary" class="pitcher-api-line"></small>
+            </div>
+          </div>
+
+          <div class="starter-box home-starter-box">
+            <img id="homeStarterImg" src="" alt="Pitcher Local" class="starter-avatar" />
+            <div class="starter-input-wrap">
+              <label for="homePitcherName">Abridor Local (<span id="homeStarterTeamLabel">LOC</span>)</label>
+              <input type="text" id="homePitcherName" placeholder="Nombre del abridor local..." />
+              <small id="homePitcherSummary" class="pitcher-api-line"></small>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="comparison-table starter-table">
+            <thead>
+              <tr>
+                <th class="col-team" id="thStarterAway">Visitante</th>
+                <th class="col-stat">Estadística</th>
+                <th class="col-criteria">Criterio</th>
+                <th class="col-team" id="thStarterHome">Local</th>
+              </tr>
+            </thead>
+            <tbody id="starterTableBody">
+              <!-- Populated by JS: ERA, WHIP, BB, SO, HR, IP -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-result starter-result" id="starterResultBox">
+          <!-- Summary of categories won in Abridor -->
+        </div>
+      </section>
+
+      <!-- AREA 2: PITCHEO COLECTIVO -->
+      <section class="card analysis-card" id="pitcheoSection">
+        <div class="area-header area-header-pitching">
+          <div>
+            <span class="area-badge">ÁREA 2 &bull; AUTOMÁTICO DIARIO (100 PUNTOS)</span>
+            <h3>2. Pitcheo Colectivo</h3>
+            <p class="area-desc">
+              Actualizado automáticamente de <a href="https://www.lmp.mx/estadisticas/equipos" target="_blank" rel="noopener noreferrer">lmp.mx/estadisticas/equipos</a>.
+              En caso de empate en una casilla, los puntos se dividen a la mitad.
+            </p>
+          </div>
+          <div class="total-points-pill">Total: 100 Puntos</div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th class="col-team" id="thPitchingAway">Visitante</th>
+                <th class="col-pts">Pts</th>
+                <th class="col-stat">Estadística</th>
+                <th class="col-criteria">Gana</th>
+                <th class="col-pts">Pts</th>
+                <th class="col-team" id="thPitchingHome">Local</th>
+              </tr>
+            </thead>
+            <tbody id="pitchingTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-result" id="pitchingResultBox">
+          <!-- Final score out of 100 pts -->
+        </div>
+      </section>
+
+      <!-- AREA 3: BATEO COLECTIVO -->
+      <section class="card analysis-card" id="bateoSection">
+        <div class="area-header area-header-batting">
+          <div>
+            <span class="area-badge">ÁREA 3 &bull; AUTOMÁTICO DIARIO (100 PUNTOS)</span>
+            <h3>3. Bateo Colectivo</h3>
+            <p class="area-desc">
+              Actualizado automáticamente de <a href="https://www.lmp.mx/estadisticas/equipos" target="_blank" rel="noopener noreferrer">lmp.mx/estadisticas/equipos</a>.
+              En caso de empate en una casilla, los puntos se dividen a la mitad.
+            </p>
+          </div>
+          <div class="total-points-pill">Total: 100 Puntos</div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th class="col-team" id="thBattingAway">Visitante</th>
+                <th class="col-pts">Pts</th>
+                <th class="col-stat">Estadística</th>
+                <th class="col-criteria">Gana</th>
+                <th class="col-pts">Pts</th>
+                <th class="col-team" id="thBattingHome">Local</th>
+              </tr>
+            </thead>
+            <tbody id="battingTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-result" id="battingResultBox">
+          <!-- Final score out of 100 pts -->
+        </div>
+      </section>
+
+      <!-- FINAL SUMMARY CARD -->
+      <section class="card analysis-card summary-card" id="globalSummarySection">
+        <div class="area-header area-header-summary">
+          <div>
+            <span class="area-badge">VEREDICTO DEL ANÁLISIS</span>
+            <h3>Resumen General del Encuentro</h3>
+            <p class="area-desc">Resultados de cada sección para el duelo seleccionado.</p>
+          </div>
+        </div>
+        <div id="globalSummaryContent" class="global-summary-content">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>Datos obtenidos en tiempo real de la API oficial de la <strong>Liga Mexicana del Pacífico Banamex</strong> (<a href="https://www.lmp.mx" target="_blank" rel="noopener noreferrer">lmp.mx</a>).</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
